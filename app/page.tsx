@@ -216,14 +216,10 @@ export default function Home() {
             </div>
             <button
               onClick={handleSearch}
-              disabled={isSearching || !searchQuery.trim()}
+              disabled={!searchQuery.trim()}
               className="btn-primary flex items-center gap-2 disabled:opacity-50"
             >
-              {isSearching ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Search className="h-4 w-4" />
-              )}
+              <Search className="h-4 w-4" />
               Search
             </button>
             {(searchResults.length > 0 || searchMetadata) && (
@@ -244,8 +240,23 @@ export default function Home() {
       <div className="pt-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
+          {/* Loading State */}
+          {isSearching && (
+            <div className="card">
+              <div className="flex items-center justify-center py-16">
+                <div className="text-center">
+                  <div className="mb-4">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary-600 mx-auto" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Searching products...</h3>
+                  <p className="text-gray-600">Finding the best matches for your query</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Search Results */}
-          {searchResults.length > 0 && (
+          {searchResults.length > 0 && !isSearching && (
             <div className="card">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">
