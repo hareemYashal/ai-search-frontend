@@ -241,110 +241,122 @@ export default function Home() {
       </div>
 
       {/* Scrollable Content Area */}
-      <div className="pt-32 flex">
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="pt-32">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-            {/* Search Results */}
-            {searchResults.length > 0 && (
-              <div className="card">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Search Results ({searchResults.length})
-                  </h3>
-                  {searchMetadata && (
-                    <div className="text-sm text-gray-500">
-                      {searchMetadata.total_results} total • {searchMetadata.search_time_ms.toFixed(0)}ms
-                    </div>
-                  )}
+          {/* Search Results */}
+          {searchResults.length > 0 && (
+            <div className="card">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Search Results ({searchResults.length})
+                </h3>
+                {searchMetadata && (
+                  <div className="text-sm text-gray-500">
+                    {searchMetadata.total_results} total • {searchMetadata.search_time_ms.toFixed(0)}ms
+                  </div>
+                )}
+              </div>
+              
+              {/* Suggested Filters */}
+              {searchMetadata?.suggested_filters && searchMetadata.suggested_filters.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-2">Suggested filters:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {searchMetadata.suggested_filters.map((filter, index) => (
+                      <span key={index} className="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full">
+                        {filter}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                
-                {/* Suggested Filters */}
-                {searchMetadata?.suggested_filters && searchMetadata.suggested_filters.length > 0 && (
-                  <div className="mb-4">
-                    <p className="text-sm text-gray-600 mb-2">Suggested filters:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {searchMetadata.suggested_filters.map((filter, index) => (
-                        <span key={index} className="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full">
-                          {filter}
+              )}
+              
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {searchResults.map((result) => (
+                  <div key={result.product_id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
+                      {result.image ? (
+                        <img src={result.image} alt={result.title} className="w-full h-full object-cover rounded-lg" />
+                      ) : (
+                        <div className="text-gray-400 text-sm">No Image</div>
+                      )}
+                    </div>
+                    <h4 className="font-medium text-gray-900 mb-1">{result.title}</h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-lg font-semibold text-primary-600">${result.price}</div>
+                      <div className={`text-xs px-2 py-1 rounded-full ${
+                        result.in_stock 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {result.in_stock ? 'In Stock' : 'Out of Stock'}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">
+                        {result.category}
+                      </span>
+                      {result.tags.slice(0, 2).map((tag, index) => (
+                        <span key={index} className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                          {tag}
                         </span>
                       ))}
                     </div>
-                  </div>
-                )}
-                
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {searchResults.map((result) => (
-                    <div key={result.product_id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                        {result.image ? (
-                          <img src={result.image} alt={result.title} className="w-full h-full object-cover rounded-lg" />
-                        ) : (
-                          <div className="text-gray-400 text-sm">No Image</div>
-                        )}
-                      </div>
-                      <h4 className="font-medium text-gray-900 mb-1">{result.title}</h4>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="text-lg font-semibold text-primary-600">${result.price}</div>
-                        <div className={`text-xs px-2 py-1 rounded-full ${
-                          result.in_stock 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {result.in_stock ? 'In Stock' : 'Out of Stock'}
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">
-                          {result.category}
-                        </span>
-                        {result.tags.slice(0, 2).map((tag, index) => (
-                          <span key={index} className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Score: {(result.boosted_score * 100).toFixed(1)}%
-                      </div>
+                    <div className="text-xs text-gray-500">
+                      Score: {(result.boosted_score * 100).toFixed(1)}%
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
+          )}
 
-            {searchResults.length === 0 && !isSearching && searchQuery && (
-              <div className="card text-center py-12">
-                <div className="text-gray-400 mb-4">
-                  <Search className="h-12 w-12 mx-auto" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
-                <p className="text-gray-600">Try adjusting your search terms or browse our categories.</p>
+          {searchResults.length === 0 && !isSearching && searchQuery && (
+            <div className="card text-center py-12">
+              <div className="text-gray-400 mb-4">
+                <Search className="h-12 w-12 mx-auto" />
               </div>
-            )}
-          </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
+              <p className="text-gray-600">Try adjusting your search terms or browse our categories.</p>
+            </div>
+          )}
         </div>
+      </div>
 
-        {/* Chat Sidebar */}
-        <div className={cn(
-          "w-80 transition-all duration-300 flex-shrink-0",
-          chatOpen ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
-        )}>
-          <div className="bg-white shadow-lg h-screen flex flex-col">
-            <div className="p-6 border-b">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Chat Assistant</h3>
+      {/* Chat Modal */}
+      {chatOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+            onClick={() => setChatOpen(false)}
+          />
+          
+          {/* Modal Container */}
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="relative bg-white rounded-xl shadow-xl w-full max-w-2xl h-[80vh] flex flex-col transform transition-all">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 rounded-t-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                    <MessageCircle className="h-5 w-5 text-primary-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">AI Chat Assistant</h3>
+                    <p className="text-sm text-gray-500">Ask me anything about our products</p>
+                  </div>
+                </div>
                 <button
                   onClick={() => setChatOpen(false)}
-                  className="p-1 text-gray-400 hover:text-gray-600"
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
-            </div>
 
-            {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto space-y-4 p-6">
+              {/* Chat Messages */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {chatMessages.map((message) => (
                   <div
                     key={message.id}
@@ -355,7 +367,7 @@ export default function Home() {
                   >
                     <div
                       className={cn(
-                        "max-w-[80%] rounded-lg px-4 py-2",
+                        "max-w-[70%] rounded-2xl px-4 py-3 shadow-sm",
                         message.isUser
                           ? "bg-primary-600 text-white"
                           : "bg-gray-100 text-gray-900"
@@ -363,8 +375,8 @@ export default function Home() {
                     >
                       <div className="text-sm whitespace-pre-line leading-relaxed">{message.text}</div>
                       {message.items_cited && message.items_cited.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-gray-200">
-                          <div className="text-xs text-gray-600 mb-1">Referenced products:</div>
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <div className="text-xs text-gray-600 mb-2">Referenced products:</div>
                           <div className="flex flex-wrap gap-1">
                             {message.items_cited.map((itemId, index) => (
                               <span key={index} className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
@@ -374,7 +386,7 @@ export default function Home() {
                           </div>
                         </div>
                       )}
-                      <p className="text-xs opacity-70 mt-1">
+                      <p className="text-xs opacity-70 mt-2">
                         {message.timestamp.toLocaleTimeString()}
                       </p>
                     </div>
@@ -382,7 +394,7 @@ export default function Home() {
                 ))}
                 {isTyping && (
                   <div className="flex justify-start">
-                    <div className="bg-gray-100 rounded-lg px-4 py-2">
+                    <div className="bg-gray-100 rounded-2xl px-4 py-3 shadow-sm">
                       <div className="flex space-x-1">
                         <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                         <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
@@ -393,28 +405,31 @@ export default function Home() {
                 )}
               </div>
 
-            {/* Chat Input */}
-            <div className="p-6 border-t">
-              <form onSubmit={handleChatSubmit} className="flex gap-2">
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Type your message..."
-                  className="flex-1 input-field text-sm"
-                />
-                <button
-                  type="submit"
-                  disabled={!chatInput.trim()}
-                  className="btn-primary p-2 disabled:opacity-50"
-                >
-                  <Send className="h-4 w-4" />
-                </button>
-              </form>
+              {/* Chat Input */}
+              <div className="p-6 border-t border-gray-200 rounded-b-xl bg-gray-50">
+                <form onSubmit={handleChatSubmit} className="flex gap-3">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Type your message..."
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200 bg-white"
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    disabled={!chatInput.trim()}
+                    className="btn-primary px-6 py-3 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    <Send className="h-4 w-4" />
+                    Send
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
