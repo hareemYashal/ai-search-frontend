@@ -66,7 +66,7 @@ export default function Home() {
     setIsSearching(true)
     
     try {
-      const response = await fetch('http://0.0.0.0:8000/search-fast', {
+      const response = await fetch('http://localhost:8000/search-fast', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -123,7 +123,7 @@ export default function Home() {
     setIsTyping(true)
 
     try {
-      const response = await fetch('http://0.0.0.0:8000/chat', {
+      const response = await fetch('http://localhost:8000/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
