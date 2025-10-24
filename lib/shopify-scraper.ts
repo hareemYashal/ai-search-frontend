@@ -37,6 +37,19 @@ export function extractDomain(input: string): string {
 }
 
 /**
+ *
+ * @param domain - The domain of the Shopify store
+ * @returns The URL of the Shopify store
+ */
+
+export function getShopifyProductUrl(product: ScrapedProduct, domain: string) {
+  if (!product || !product.handle) {
+    throw new Error("Invalid product object");
+  }
+  return `https://${domain}/products/${product.handle}`;
+}
+
+/**
  * Build Shopify products.json URL
  */
 export function buildProductsUrl(domain: string): string {
@@ -104,6 +117,10 @@ export async function scrapeShopifyStore(
         break;
       }
 
+      data.products.forEach((product: ScrapedProduct) => {
+        product.url = getShopifyProductUrl(product, cleanDomain);
+      });
+
       allProducts = [...allProducts, ...data.products];
 
       // Check if we got less than 250 products (indicates last page)
@@ -167,6 +184,11 @@ export async function scrapeShopifyStoreUnlimited(
       throw new Error("Invalid response format from store");
     }
 
+    // Add product URLs to each product
+    data.products.forEach((product: ScrapedProduct) => {
+      product.url = getShopifyProductUrl(product, cleanDomain);
+    });
+
     return {
       success: true,
       products: data.products,
@@ -197,6 +219,99 @@ export function downloadProductsJson(
   link.download = `${storeDomain}-products-${
     new Date().toISOString().split("T")[0]
   }.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  // Clean up the URL object
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Convert scraped products to JSONL format
+ * Each line is a JSON object with: product_id, title, text, price, url, image, in_stock, category, tags
+ */
+export function convertToJsonl(
+  products: ScrapedProduct[],
+  storeDomain: string
+): string {
+  return products
+    .map((product) => {
+      // Extract the first variant price (as a number)
+      const price = product.variants?.[0]?.price
+        ? parseFloat(product.variants[0].price)
+        : 0.0;
+
+      // Get the first image URL
+      const image = product.images?.[0]?.src || "";
+
+      // Determine in_stock status (if any variant is available)
+      const in_stock = product.variants?.some((v) => v.available) || false;
+
+      // Use product_type as category
+      const category = product.product_type || "";
+
+      // Convert tags array to array (keep as is if it's already an array)
+      const tags = Array.isArray(product.tags) ? product.tags : [];
+
+      // Create the JSONL object
+      const jsonlObject = {
+        product_id: product.id.toString(),
+        title: product.title || "",
+        text: product.body_html ? stripHtml(product.body_html) : "",
+        price: price,
+        url: product.url || "",
+        image: image,
+        in_stock: in_stock,
+        category: category,
+        tags: tags,
+      };
+
+      return JSON.stringify(jsonlObject);
+    })
+    .join("\n");
+}
+
+/**
+ * Strip HTML tags from text
+ */
+function stripHtml(html: string): string {
+  // Remove HTML tags
+  let text = html.replace(/<[^>]*>/g, " ");
+
+  // Replace multiple spaces with single space
+  text = text.replace(/\s+/g, " ");
+
+  // Decode common HTML entities
+  text = text
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&apos;/g, "'");
+
+  // Trim whitespace
+  return text.trim();
+}
+
+/**
+ * Download products as JSONL file
+ */
+export function downloadProductsJsonl(
+  products: ScrapedProduct[],
+  storeDomain: string
+) {
+  const jsonlContent = convertToJsonl(products, storeDomain);
+  const dataBlob = new Blob([jsonlContent], { type: "application/jsonl" });
+  const url = URL.createObjectURL(dataBlob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${storeDomain}-products-${
+    new Date().toISOString().split("T")[0]
+  }.jsonl`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

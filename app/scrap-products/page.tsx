@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { ScrapedProduct } from '@/lib/product-uploader';
-import { downloadProductsJson, isValidShopifyDomain } from '@/lib/shopify-scraper';
+import { downloadProductsJson, downloadProductsJsonl, isValidShopifyDomain } from '@/lib/shopify-scraper';
 
 interface UploadProgress {
     total: number;
@@ -107,7 +107,17 @@ const ScrapProductsPage = () => {
             : scrapedProducts;
 
         downloadProductsJson(productsToDownload, storeDomain || 'products');
-        alert(`Downloaded ${productsToDownload.length} products`);
+        alert(`Downloaded ${productsToDownload.length} products as JSON`);
+    };
+
+    // Download JSONL
+    const handleDownloadJsonl = () => {
+        const productsToDownload = selectedProducts.size > 0
+            ? scrapedProducts.filter(p => selectedProducts.has(p.id))
+            : scrapedProducts;
+
+        downloadProductsJsonl(productsToDownload, storeDomain || 'products');
+        alert(`Downloaded ${productsToDownload.length} products as JSONL`);
     };
 
     // Upload selected products
@@ -336,6 +346,13 @@ const ScrapProductsPage = () => {
                                         </button>
 
                                         <button
+                                            onClick={handleDownloadJsonl}
+                                            className="px-4 py-2 bg-white border border-purple-300 rounded-lg hover:bg-purple-50 font-medium text-purple-700 transition-colors"
+                                        >
+                                            📄 Download JSONL
+                                        </button>
+
+                                        <button
                                             onClick={handleUpload}
                                             disabled={uploading || selectedProducts.size === 0}
                                             className={`px-6 py-2 rounded-lg font-semibold text-white transition-all ${uploading || selectedProducts.size === 0
@@ -390,6 +407,9 @@ const ScrapProductsPage = () => {
                                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     Price
                                                 </th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                                                    Link
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
@@ -439,6 +459,34 @@ const ScrapProductsPage = () => {
                                                         <div className="text-sm font-medium text-gray-900">
                                                             ${product.variants[0]?.price}
                                                         </div>
+                                                    </td>
+                                                    <td className="px-4 py-4">
+                                                        {product.url ? (
+                                                            <a
+                                                                href={product.url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-blue-600 hover:text-blue-800 text-sm flex items-center space-x-1"
+                                                                title={product.url}
+                                                            >
+                                                                <svg
+                                                                    className="w-4 h-4"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    viewBox="0 0 24 24"
+                                                                >
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth={2}
+                                                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                                                    />
+                                                                </svg>
+                                                                <span>View</span>
+                                                            </a>
+                                                        ) : (
+                                                            <span className="text-gray-400 text-xs">N/A</span>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             ))}

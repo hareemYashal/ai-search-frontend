@@ -24,6 +24,7 @@ export interface ScrapedProduct {
   tags: string[];
   variants: ScrapedVariant[];
   images: ScrapedImage[];
+  url?: string;
 }
 
 export interface ScrapedVariant {
