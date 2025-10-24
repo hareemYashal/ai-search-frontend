@@ -313,7 +313,7 @@ export default function Home() {
                           {result.in_stock ? 'In Stock' : 'Out of Stock'}
                         </div>
                       </div>
-                      <div className="flex flex-wrap gap-1 mb-4 min-h-[2.5rem]">
+                      <div className="flex flex-wrap gap-1 mb-4 min-h-[1.75rem] items-start">
                         <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">
                           {result.category}
                         </span>
