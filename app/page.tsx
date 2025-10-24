@@ -293,7 +293,7 @@ export default function Home() {
               
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {searchResults.map((result) => (
-                  <div key={result.product_id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div key={result.product_id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col h-full">
                     <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
                       {result.image ? (
                         <img src={result.image} alt={result.title} className="w-full h-full object-cover rounded-lg" />
@@ -301,38 +301,42 @@ export default function Home() {
                         <div className="text-gray-400 text-sm">No Image</div>
                       )}
                     </div>
-                    <h4 className="font-medium text-gray-900 mb-1">{result.title}</h4>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-lg font-semibold text-primary-600">${result.price}</div>
-                      <div className={`text-xs px-2 py-1 rounded-full ${
-                        result.in_stock 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {result.in_stock ? 'In Stock' : 'Out of Stock'}
+                    <div className="flex-1 flex flex-col">
+                      <h4 className="font-medium text-gray-900 mb-3 min-h-[3rem] line-clamp-2">{result.title}</h4>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-lg font-semibold text-primary-600">${result.price}</div>
+                        <div className={`text-xs px-2 py-1 rounded-full ${
+                          result.in_stock 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {result.in_stock ? 'In Stock' : 'Out of Stock'}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mb-4 min-h-[2.5rem]">
+                        <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">
+                          {result.category}
+                        </span>
+                        {result.tags.slice(0, 2).map((tag, index) => (
+                          <span key={index} className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-auto">
+                        <a
+                          href={result.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full bg-primary-600 text-white text-sm font-medium py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors inline-flex items-center justify-center gap-2"
+                        >
+                          <span>View Product</span>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </a>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">
-                        {result.category}
-                      </span>
-                      {result.tags.slice(0, 2).map((tag, index) => (
-                        <span key={index} className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    <a
-                      href={result.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full bg-primary-600 text-white text-sm font-medium py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors inline-flex items-center justify-center gap-2"
-                    >
-                      <span>View Product</span>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </a>
                   </div>
                 ))}
               </div>
