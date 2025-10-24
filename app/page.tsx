@@ -64,7 +64,7 @@ export default function Home() {
   // Real API search function
   const performSearch = async (query: string) => {
     setIsSearching(true)
-    
+
     try {
       const response = await fetch('http://0.0.0.0:8000/search-fast', {
         method: 'POST',
@@ -73,11 +73,11 @@ export default function Home() {
         },
         body: JSON.stringify({ query }),
       })
-      
+
       if (!response.ok) {
         throw new Error(`Search failed: ${response.status}`)
       }
-      
+
       const data: SearchResponse = await response.json()
       setSearchResults(data.items)
       setSearchMetadata({
@@ -130,19 +130,19 @@ export default function Home() {
         },
         body: JSON.stringify({ message: chatInput }),
       })
-      
+
       if (!response.ok) {
         throw new Error(`Chat failed: ${response.status}`)
       }
-      
+
       const data: ChatResponse = await response.json()
-      
+
       // Clean up the response text
       let cleanAnswer = data.answer
       if (cleanAnswer.startsWith('Assistant:')) {
         cleanAnswer = cleanAnswer.substring(10).trim()
       }
-      
+
       const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         text: cleanAnswer,
@@ -150,7 +150,7 @@ export default function Home() {
         timestamp: new Date(),
         items_cited: data.items_cited
       }
-      
+
       setChatMessages(prev => [...prev, botMessage])
     } catch (error) {
       console.error('Chat error:', error)
@@ -172,8 +172,19 @@ export default function Home() {
       <header className="fixed top-0 left-0 right-0 bg-white shadow-sm border-b z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
+            <div className="flex items-center gap-8">
               <h1 className="text-2xl font-bold text-gray-900">AI Search</h1>
+              <nav className="hidden md:flex gap-6">
+                <a href="/" className="text-gray-600 hover:text-gray-900 transition-colors">
+                  Search
+                </a>
+                <a href="/scrap-products" className="text-gray-600 hover:text-gray-900 transition-colors">
+                  Scrape Products
+                </a>
+                <a href="/my-products" className="text-gray-600 hover:text-gray-900 transition-colors">
+                  My Products
+                </a>
+              </nav>
             </div>
             <button
               onClick={() => setChatOpen(!chatOpen)}
@@ -206,6 +217,7 @@ export default function Home() {
               />
               {searchQuery && (
                 <button
+                  title="Clear search"
                   type="button"
                   onClick={clearSearch}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
@@ -218,6 +230,7 @@ export default function Home() {
               onClick={handleSearch}
               disabled={!searchQuery.trim()}
               className="btn-primary flex items-center gap-2 disabled:opacity-50"
+              title="Search products"
             >
               <Search className="h-4 w-4" />
               Search
@@ -268,7 +281,7 @@ export default function Home() {
                   </div>
                 )}
               </div>
-              
+
               {/* Suggested Filters */}
               {searchMetadata?.suggested_filters && searchMetadata.suggested_filters.length > 0 && (
                 <div className="mb-4">
@@ -282,7 +295,7 @@ export default function Home() {
                   </div>
                 </div>
               )}
-              
+
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {searchResults.map((result) => (
                   <div key={result.product_id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
@@ -296,11 +309,10 @@ export default function Home() {
                     <h4 className="font-medium text-gray-900 mb-1">{result.title}</h4>
                     <div className="flex items-center justify-between mb-2">
                       <div className="text-lg font-semibold text-primary-600">${result.price}</div>
-                      <div className={`text-xs px-2 py-1 rounded-full ${
-                        result.in_stock 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
+                      <div className={`text-xs px-2 py-1 rounded-full ${result.in_stock
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}>
                         {result.in_stock ? 'In Stock' : 'Out of Stock'}
                       </div>
                     </div>
@@ -339,11 +351,11 @@ export default function Home() {
       {chatOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           {/* Backdrop */}
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
             onClick={() => setChatOpen(false)}
           />
-          
+
           {/* Modal Container */}
           <div className="flex min-h-full items-center justify-center p-4">
             <div className="relative bg-white rounded-xl shadow-xl w-full max-w-2xl h-[80vh] flex flex-col transform transition-all">
@@ -361,6 +373,7 @@ export default function Home() {
                 <button
                   onClick={() => setChatOpen(false)}
                   className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Close chat"
                 >
                   <X className="h-5 w-5" />
                 </button>
