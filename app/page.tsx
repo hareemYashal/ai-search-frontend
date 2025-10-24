@@ -431,32 +431,33 @@ export default function Home() {
                         <div className="mt-3 pt-3 border-t border-gray-200">
                           <div className="text-xs text-gray-600 mb-2">Referenced products:</div>
                           <div className="flex flex-wrap gap-1">
-                            {message.items_cited.map((itemId, index) => (
-                              <span key={index} className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
-                                #{itemId}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {message.product_links && message.product_links.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-gray-200">
-                          <div className="text-xs text-gray-600 mb-2">Product links:</div>
-                          <div className="flex flex-wrap gap-2">
-                            {message.product_links.map((link, index) => (
-                              <a
-                                key={index}
-                                href={link.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bg-primary-100 text-primary-700 text-xs px-3 py-2 rounded-lg hover:bg-primary-200 transition-colors inline-flex items-center gap-1"
-                              >
-                                <span>View Product #{link.product_id}</span>
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                </svg>
-                              </a>
-                            ))}
+                            {message.items_cited.map((itemId, index) => {
+                              // Find the corresponding product link for this item ID
+                              const productLink = message.product_links?.find(link => link.product_id === itemId)
+                              
+                              if (productLink) {
+                                return (
+                                  <a
+                                    key={index}
+                                    href={productLink.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full hover:bg-blue-200 transition-colors inline-flex items-center gap-1"
+                                  >
+                                    <span>#{itemId}</span>
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                  </a>
+                                )
+                              } else {
+                                return (
+                                  <span key={index} className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                                    #{itemId}
+                                  </span>
+                                )
+                              }
+                            })}
                           </div>
                         </div>
                       )}
