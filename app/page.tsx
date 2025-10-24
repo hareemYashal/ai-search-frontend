@@ -1,189 +1,189 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Search, MessageCircle, Send, Loader2, X, XCircle } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useState, useEffect } from "react";
+import { Search, MessageCircle, Send, Loader2, X, XCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SearchResult {
-  product_id: string
-  title: string
-  price: number
-  url: string
-  image: string
-  in_stock: boolean
-  category: string
-  tags: string[]
-  score: number
-  boosted_score: number
-  reason: string
+  product_id: string;
+  title: string;
+  price: number;
+  url: string;
+  image: string;
+  in_stock: boolean;
+  category: string;
+  tags: string[];
+  score: number;
+  boosted_score: number;
+  reason: string;
 }
 
 interface SearchResponse {
-  items: SearchResult[]
-  suggested_filters: string[]
-  search_time_ms: number
-  total_results: number
+  items: SearchResult[];
+  suggested_filters: string[];
+  search_time_ms: number;
+  total_results: number;
 }
 
 interface ChatMessage {
-  id: string
-  text: string
-  isUser: boolean
-  timestamp: Date
-  items_cited?: string[]
-  product_links?: ProductLink[]
+  id: string;
+  text: string;
+  isUser: boolean;
+  timestamp: Date;
+  items_cited?: string[];
+  product_links?: ProductLink[];
 }
 
 interface ProductLink {
-  product_id: string
-  url: string
+  product_id: string;
+  url: string;
 }
 
 interface ChatResponse {
-  answer: string
-  items_cited: string[]
-  search_time_ms: number
-  reasoning: string
-  product_links?: ProductLink[]
+  answer: string;
+  items_cited: string[];
+  search_time_ms: number;
+  reasoning: string;
+  product_links?: ProductLink[];
 }
 
 export default function Home() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
-  const [isSearching, setIsSearching] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [searchMetadata, setSearchMetadata] = useState<{
-    total_results: number
-    search_time_ms: number
-    suggested_filters: string[]
-  } | null>(null)
-  const [chatOpen, setChatOpen] = useState(false)
+    total_results: number;
+    search_time_ms: number;
+    suggested_filters: string[];
+  } | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
-      id: '1',
-      text: 'Hello! How can I help you today?',
+      id: "1",
+      text: "Hello! How can I help you today?",
       isUser: false,
-      timestamp: new Date()
-    }
-  ])
-  const [chatInput, setChatInput] = useState('')
-  const [isTyping, setIsTyping] = useState(false)
+      timestamp: new Date(),
+    },
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
 
   const resetChat = () => {
     setChatMessages([
       {
-        id: '1',
-        text: 'Hello! How can I help you today?',
+        id: "1",
+        text: "Hello! How can I help you today?",
         isUser: false,
-        timestamp: new Date()
-      }
-    ])
-  }
+        timestamp: new Date(),
+      },
+    ]);
+  };
 
   // Real API search function
   const performSearch = async (query: string) => {
-    setIsSearching(true)
-    
+    setIsSearching(true);
+
     try {
-      const response = await fetch('http://0.0.0.0:8000/search-fast', {
-        method: 'POST',
+      const response = await fetch("http://0.0.0.0:8000/search-fast", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ query }),
-      })
-      
+      });
+
       if (!response.ok) {
-        throw new Error(`Search failed: ${response.status}`)
+        throw new Error(`Search failed: ${response.status}`);
       }
-      
-      const data: SearchResponse = await response.json()
-      setSearchResults(data.items)
+
+      const data: SearchResponse = await response.json();
+      setSearchResults(data.items);
       setSearchMetadata({
         total_results: data.total_results,
         search_time_ms: data.search_time_ms,
-        suggested_filters: data.suggested_filters
-      })
+        suggested_filters: data.suggested_filters,
+      });
     } catch (error) {
-      console.error('Search error:', error)
-      setSearchResults([])
-      setSearchMetadata(null)
+      console.error("Search error:", error);
+      setSearchResults([]);
+      setSearchMetadata(null);
     } finally {
-      setIsSearching(false)
+      setIsSearching(false);
     }
-  }
+  };
 
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (searchQuery.trim()) {
-      performSearch(searchQuery.trim())
+      performSearch(searchQuery.trim());
     }
-  }
+  };
 
   const clearSearch = () => {
-    setSearchQuery('')
-    setSearchResults([])
-    setSearchMetadata(null)
-  }
+    setSearchQuery("");
+    setSearchResults([]);
+    setSearchMetadata(null);
+  };
 
   const handleChatSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!chatInput.trim()) return
+    e.preventDefault();
+    if (!chatInput.trim()) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       text: chatInput,
       isUser: true,
-      timestamp: new Date()
-    }
+      timestamp: new Date(),
+    };
 
-    setChatMessages(prev => [...prev, userMessage])
-    setChatInput('')
-    setIsTyping(true)
+    setChatMessages((prev) => [...prev, userMessage]);
+    setChatInput("");
+    setIsTyping(true);
 
     try {
-      const response = await fetch('http://0.0.0.0:8000/chat', {
-        method: 'POST',
+      const response = await fetch("http://0.0.0.0:8000/chat", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ message: chatInput }),
-      })
-      
+      });
+
       if (!response.ok) {
-        throw new Error(`Chat failed: ${response.status}`)
+        throw new Error(`Chat failed: ${response.status}`);
       }
-      
-      const data: ChatResponse = await response.json()
-      
+
+      const data: ChatResponse = await response.json();
+
       // Clean up the response text
-      let cleanAnswer = data.answer
-      if (cleanAnswer.startsWith('Assistant:')) {
-        cleanAnswer = cleanAnswer.substring(10).trim()
+      let cleanAnswer = data.answer;
+      if (cleanAnswer.startsWith("Assistant:")) {
+        cleanAnswer = cleanAnswer.substring(10).trim();
       }
-      
+
       const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         text: cleanAnswer,
         isUser: false,
         timestamp: new Date(),
         items_cited: data.items_cited,
-        product_links: data.product_links
-      }
-      
-      setChatMessages(prev => [...prev, botMessage])
+        product_links: data.product_links,
+      };
+
+      setChatMessages((prev) => [...prev, botMessage]);
     } catch (error) {
-      console.error('Chat error:', error)
+      console.error("Chat error:", error);
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         text: "I'm sorry, I'm having trouble connecting right now. Please try again.",
         isUser: false,
-        timestamp: new Date()
-      }
-      setChatMessages(prev => [...prev, errorMessage])
+        timestamp: new Date(),
+      };
+      setChatMessages((prev) => [...prev, errorMessage]);
     } finally {
-      setIsTyping(false)
+      setIsTyping(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -191,8 +191,28 @@ export default function Home() {
       <header className="fixed top-0 left-0 right-0 bg-white shadow-sm border-b z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
+            <div className="flex items-center gap-8">
               <h1 className="text-2xl font-bold text-gray-900">AI Search</h1>
+              <nav className="hidden md:flex gap-6">
+                <a
+                  href="/"
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Search
+                </a>
+                <a
+                  href="/scrap-products"
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Scrape Products
+                </a>
+                <a
+                  href="/my-products"
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  My Products
+                </a>
+              </nav>
             </div>
             <button
               onClick={() => setChatOpen(!chatOpen)}
@@ -225,6 +245,7 @@ export default function Home() {
               />
               {searchQuery && (
                 <button
+                  title="Clear search"
                   type="button"
                   onClick={clearSearch}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
@@ -237,6 +258,7 @@ export default function Home() {
               onClick={handleSearch}
               disabled={!searchQuery.trim()}
               className="btn-primary flex items-center gap-2 disabled:opacity-50"
+              title="Search products"
             >
               <Search className="h-4 w-4" />
               Search
@@ -258,7 +280,6 @@ export default function Home() {
       {/* Scrollable Content Area */}
       <div className="pt-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
           {/* Loading State */}
           {isSearching && (
             <div className="card">
@@ -267,8 +288,12 @@ export default function Home() {
                   <div className="mb-4">
                     <Loader2 className="h-12 w-12 animate-spin text-primary-600 mx-auto" />
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Searching products...</h3>
-                  <p className="text-gray-600">Finding the best matches for your query</p>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Searching products...
+                  </h3>
+                  <p className="text-gray-600">
+                    Finding the best matches for your query
+                  </p>
                 </div>
               </div>
             </div>
@@ -283,45 +308,65 @@ export default function Home() {
                 </h3>
                 {searchMetadata && (
                   <div className="text-sm text-gray-500">
-                    {searchMetadata.total_results} total • {searchMetadata.search_time_ms.toFixed(0)}ms
+                    {searchMetadata.total_results} total •{" "}
+                    {searchMetadata.search_time_ms.toFixed(0)}ms
                   </div>
                 )}
               </div>
-              
+
               {/* Suggested Filters */}
-              {searchMetadata?.suggested_filters && searchMetadata.suggested_filters.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-sm text-gray-600 mb-2">Suggested filters:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {searchMetadata.suggested_filters.map((filter, index) => (
-                      <span key={index} className="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full">
-                        {filter}
-                      </span>
-                    ))}
+              {searchMetadata?.suggested_filters &&
+                searchMetadata.suggested_filters.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600 mb-2">
+                      Suggested filters:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {searchMetadata.suggested_filters.map((filter, index) => (
+                        <span
+                          key={index}
+                          className="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full"
+                        >
+                          {filter}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-              
+                )}
+
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {searchResults.map((result) => (
-                  <div key={result.product_id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col h-full">
+                  <div
+                    key={result.product_id}
+                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col h-full"
+                  >
                     <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
                       {result.image ? (
-                        <img src={result.image} alt={result.title} className="w-full h-full object-cover rounded-lg" />
+                        <img
+                          src={result.image}
+                          alt={result.title}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
                       ) : (
                         <div className="text-gray-400 text-sm">No Image</div>
                       )}
                     </div>
                     <div className="flex-1 flex flex-col">
-                      <h4 className="font-medium text-gray-900 mb-3 min-h-[3rem] line-clamp-2">{result.title}</h4>
+                      <h4 className="font-medium text-gray-900 mb-3 min-h-[3rem] line-clamp-2">
+                        {result.title}
+                      </h4>
                       <div className="flex items-center justify-between mb-3">
-                        <div className="text-lg font-semibold text-primary-600">${result.price}</div>
-                        <div className={`text-xs px-2 py-1 rounded-full ${
-                          result.in_stock 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {result.in_stock ? 'In Stock' : 'Out of Stock'}
+                        <div className="text-lg font-semibold text-primary-600">
+                          ${result.price}
+                        </div>
+                        <div
+                          className={`text-xs px-2 py-1 rounded-full ${
+                            result.in_stock
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {result.in_stock ? "In Stock" : "Out of Stock"}
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-1 mb-4 min-h-[1.75rem] items-start">
@@ -329,7 +374,10 @@ export default function Home() {
                           {result.category}
                         </span>
                         {result.tags.slice(0, 2).map((tag, index) => (
-                          <span key={index} className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                          <span
+                            key={index}
+                            className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full"
+                          >
                             {tag}
                           </span>
                         ))}
@@ -342,8 +390,18 @@ export default function Home() {
                           className="w-full bg-primary-600 text-white text-sm font-medium py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors inline-flex items-center justify-center gap-2"
                         >
                           <span>View Product</span>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                            />
                           </svg>
                         </a>
                       </div>
@@ -359,8 +417,12 @@ export default function Home() {
               <div className="text-gray-400 mb-4">
                 <Search className="h-12 w-12 mx-auto" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
-              <p className="text-gray-600">Try adjusting your search terms or browse our categories.</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No results found
+              </h3>
+              <p className="text-gray-600">
+                Try adjusting your search terms or browse our categories.
+              </p>
             </div>
           )}
         </div>
@@ -370,11 +432,11 @@ export default function Home() {
       {chatOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           {/* Backdrop */}
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
             onClick={() => setChatOpen(false)}
           />
-          
+
           {/* Modal Container */}
           <div className="flex min-h-full items-center justify-center p-4">
             <div className="relative bg-white rounded-xl shadow-xl w-full max-w-2xl h-[80vh] flex flex-col transform transition-all">
@@ -385,8 +447,12 @@ export default function Home() {
                     <MessageCircle className="h-5 w-5 text-primary-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">AI Chat Assistant</h3>
-                    <p className="text-sm text-gray-500">Ask me anything about our products</p>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      AI Chat Assistant
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Ask me anything about our products
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -395,8 +461,18 @@ export default function Home() {
                     className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                     title="Reset Chat"
                   >
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <svg
+                      className="h-5 w-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
                     </svg>
                   </button>
                   <button
@@ -426,41 +502,61 @@ export default function Home() {
                           : "bg-gray-100 text-gray-900"
                       )}
                     >
-                      <div className="text-sm whitespace-pre-line leading-relaxed">{message.text}</div>
-                      {message.items_cited && message.items_cited.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-gray-200">
-                          <div className="text-xs text-gray-600 mb-2">Referenced products:</div>
-                          <div className="flex flex-wrap gap-1">
-                            {message.items_cited.map((itemId, index) => {
-                              // Find the corresponding product link for this item ID
-                              const productLink = message.product_links?.find(link => link.product_id === itemId)
-                              
-                              if (productLink) {
-                                return (
-                                  <a
-                                    key={index}
-                                    href={productLink.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full hover:bg-blue-200 transition-colors inline-flex items-center gap-1"
-                                  >
-                                    <span>#{itemId}</span>
-                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                    </svg>
-                                  </a>
-                                )
-                              } else {
-                                return (
-                                  <span key={index} className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
-                                    #{itemId}
-                                  </span>
-                                )
-                              }
-                            })}
+                      <div className="text-sm whitespace-pre-line leading-relaxed">
+                        {message.text}
+                      </div>
+                      {message.items_cited &&
+                        message.items_cited.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <div className="text-xs text-gray-600 mb-2">
+                              Referenced products:
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {message.items_cited.map((itemId, index) => {
+                                // Find the corresponding product link for this item ID
+                                const productLink = message.product_links?.find(
+                                  (link) => link.product_id === itemId
+                                );
+
+                                if (productLink) {
+                                  return (
+                                    <a
+                                      key={index}
+                                      href={productLink.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full hover:bg-blue-200 transition-colors inline-flex items-center gap-1"
+                                    >
+                                      <span>#{itemId}</span>
+                                      <svg
+                                        className="w-3 h-3"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                        />
+                                      </svg>
+                                    </a>
+                                  );
+                                } else {
+                                  return (
+                                    <span
+                                      key={index}
+                                      className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full"
+                                    >
+                                      #{itemId}
+                                    </span>
+                                  );
+                                }
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                       <p className="text-xs opacity-70 mt-2">
                         {message.timestamp.toLocaleTimeString()}
                       </p>
@@ -472,8 +568,14 @@ export default function Home() {
                     <div className="bg-gray-100 rounded-2xl px-4 py-3 shadow-sm">
                       <div className="flex space-x-1">
                         <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.1s" }}
+                        ></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0.2s" }}
+                        ></div>
                       </div>
                     </div>
                   </div>
@@ -506,5 +608,5 @@ export default function Home() {
         </div>
       )}
     </div>
-  )
+  );
 }
