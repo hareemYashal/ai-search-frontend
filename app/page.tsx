@@ -322,9 +322,17 @@ export default function Home() {
                         </span>
                       ))}
                     </div>
-                    <div className="text-xs text-gray-500">
-                      Score: {(result.boosted_score * 100).toFixed(1)}%
-                    </div>
+                    <a
+                      href={result.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full bg-primary-600 text-white text-sm font-medium py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors inline-flex items-center justify-center gap-2"
+                    >
+                      <span>View Product</span>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
                   </div>
                 ))}
               </div>
