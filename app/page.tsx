@@ -84,7 +84,7 @@ export default function Home() {
     setIsSearching(true);
 
     try {
-      const response = await fetch("http://0.0.0.0:8000/search-fast", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/search-fast`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -141,7 +141,7 @@ export default function Home() {
     setIsTyping(true);
 
     try {
-      const response = await fetch("http://0.0.0.0:8000/chat", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -360,11 +360,10 @@ export default function Home() {
                           ${result.price}
                         </div>
                         <div
-                          className={`text-xs px-2 py-1 rounded-full ${
-                            result.in_stock
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
+                          className={`text-xs px-2 py-1 rounded-full ${result.in_stock
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                            }`}
                         >
                           {result.in_stock ? "In Stock" : "Out of Stock"}
                         </div>
@@ -476,6 +475,7 @@ export default function Home() {
                     </svg>
                   </button>
                   <button
+                    title="Close Chat"
                     onClick={() => setChatOpen(false)}
                     className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                   >
