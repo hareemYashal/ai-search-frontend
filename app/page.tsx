@@ -107,7 +107,7 @@ export default function Home() {
   const fetchCollections = async () => {
     setIsLoadingCollections(true);
     try {
-      const response = await fetch(`http://localhost:8000/get-collections`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/get-collections`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -140,7 +140,7 @@ export default function Home() {
     setIsSearching(true);
 
     try {
-      const response = await fetch(`http://localhost:8000/search-fast`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/search-fast`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -201,7 +201,7 @@ export default function Home() {
     setIsTyping(true);
 
     try {
-      const response = await fetch(`http://localhost:8000/chat`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
