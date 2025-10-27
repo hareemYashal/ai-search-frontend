@@ -47,6 +47,19 @@ interface ChatResponse {
   product_links?: ProductLink[];
 }
 
+interface Collection {
+  name: string;
+  count: number;
+  metadata: {
+    "hnsw:space": string;
+  };
+}
+
+interface CollectionsResponse {
+  collections: Collection[];
+  total_collections: number;
+}
+
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -67,6 +80,14 @@ export default function Home() {
   ]);
   const [chatInput, setChatInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [selectedCollection, setSelectedCollection] = useState<string>("");
+  const [isLoadingCollections, setIsLoadingCollections] = useState(false);
+
+  // Fetch collections on component mount
+  useEffect(() => {
+    fetchCollections();
+  }, []);
 
   const resetChat = () => {
     setChatMessages([
@@ -79,17 +100,49 @@ export default function Home() {
     ]);
   };
 
+  // Fetch collections from API
+  const fetchCollections = async () => {
+    setIsLoadingCollections(true);
+    try {
+      const response = await fetch(`http://localhost:8000/get-collections`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch collections: ${response.status}`);
+      }
+
+      const data: CollectionsResponse = await response.json();
+      setCollections(data.collections);
+      
+      // Set the first collection as default if none is selected
+      if (data.collections.length > 0 && !selectedCollection) {
+        setSelectedCollection(data.collections[0].name);
+      }
+    } catch (error) {
+      console.error("Error fetching collections:", error);
+    } finally {
+      setIsLoadingCollections(false);
+    }
+  };
+
   // Real API search function
   const performSearch = async (query: string) => {
     setIsSearching(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/search-fast`, {
+      const response = await fetch(`http://localhost:8000/search-fast`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ 
+          query,
+          collection_name: selectedCollection || collections[0]?.name || "products"
+        }),
       });
 
       if (!response.ok) {
@@ -141,7 +194,7 @@ export default function Home() {
     setIsTyping(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
+      const response = await fetch(`http://localhost:8000/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -233,6 +286,46 @@ export default function Home() {
       <div className="fixed top-16 left-0 right-0 bg-white border-b shadow-sm z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex gap-4">
+            {/* Collections Dropdown */}
+            <div className="relative">
+              <div className="relative">
+                <select
+                  value={selectedCollection}
+                  onChange={(e) => setSelectedCollection(e.target.value)}
+                  disabled={isLoadingCollections}
+                  className="appearance-none px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200 bg-white min-w-[200px] text-sm font-medium text-gray-900 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoadingCollections ? (
+                    <option value="">Loading collections...</option>
+                  ) : collections.length > 0 ? (
+                    collections.map((collection) => (
+                      <option key={collection.name} value={collection.name}>
+                        {collection.name} ({collection.count})
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">No collections available</option>
+                  )}
+                </select>
+                {/* Custom dropdown arrow */}
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg
+                    className="w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               <input
