@@ -83,6 +83,7 @@ export default function Home() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedCollection, setSelectedCollection] = useState<string>("");
   const [isLoadingCollections, setIsLoadingCollections] = useState(false);
+  const [kValue, setKValue] = useState<string>("12");
 
   // Fetch collections on component mount
   useEffect(() => {
@@ -141,7 +142,8 @@ export default function Home() {
         },
         body: JSON.stringify({ 
           query,
-          collection_name: selectedCollection || collections[0]?.name || "products"
+          collection_name: selectedCollection || collections[0]?.name || "products",
+          k: parseInt(kValue)
         }),
       });
 
@@ -323,6 +325,26 @@ export default function Home() {
                     />
                   </svg>
                 </div>
+              </div>
+            </div>
+
+            {/* Results Count Dropdown */}
+            <div className="relative">
+              <select
+                value={kValue}
+                onChange={(e) => setKValue(e.target.value)}
+                className="appearance-none px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200 bg-white min-w-[120px] text-sm font-medium text-gray-900 hover:border-gray-400"
+              >
+                {Array.from({ length: 24 }, (_, i) => i + 1).map((num) => (
+                  <option key={num} value={num.toString()}>
+                    {num} results
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
             </div>
             
