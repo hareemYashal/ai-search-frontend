@@ -369,7 +369,7 @@ const ScrapProductsPage = () => {
                                 <p className="text-sm text-gray-600 mb-4">
                                     Click any store below to instantly scrape their products
                                 </p>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                                     {[
                                         { domain: 'honestpaws.com', count: '~38' },
                                         { domain: 'henne.us', count: '~390' },
@@ -378,6 +378,7 @@ const ScrapProductsPage = () => {
                                         { domain: 'slickproductsusa.com', count: 'TBD' },
                                         { domain: 'ridejetson.com', count: 'TBD' },
                                         { domain: 'arhaus.com', count: 'TBD' },
+                                        { domain: 'kesstech.us', count: 'TBD' },
                                         { domain: 'hobbiesville.com', count: '~25K' },
                                     ].map((store) => (
                                         <button
