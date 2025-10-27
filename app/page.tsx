@@ -83,7 +83,9 @@ export default function Home() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedCollection, setSelectedCollection] = useState<string>("");
   const [isLoadingCollections, setIsLoadingCollections] = useState(false);
-  const [kValue, setKValue] = useState<string>("12");
+  const [kValue, setKValue] = useState<string>("5");
+  const [chatCollection, setChatCollection] = useState<string>("");
+  const [chatKValue, setChatKValue] = useState<number>(12);
 
   // Fetch collections on component mount
   useEffect(() => {
@@ -122,6 +124,9 @@ export default function Home() {
       // Set the first collection as default if none is selected
       if (data.collections.length > 0 && !selectedCollection) {
         setSelectedCollection(data.collections[0].name);
+      }
+      if (data.collections.length > 0 && !chatCollection) {
+        setChatCollection(data.collections[0].name);
       }
     } catch (error) {
       console.error("Error fetching collections:", error);
@@ -201,7 +206,11 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ message: chatInput }),
+        body: JSON.stringify({ 
+          message: chatInput,
+          collection_name: chatCollection || collections[0]?.name || "products",
+          k: chatKValue
+        }),
       });
 
       if (!response.ok) {
@@ -328,25 +337,18 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Results Count Dropdown */}
-            <div className="relative">
-              <select
-                value={kValue}
-                onChange={(e) => setKValue(e.target.value)}
-                className="appearance-none px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200 bg-white min-w-[120px] text-sm font-medium text-gray-900 hover:border-gray-400"
-              >
-                {Array.from({ length: 24 }, (_, i) => i + 1).map((num) => (
-                  <option key={num} value={num.toString()}>
-                    {num} results
-                  </option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
+            {/* Results Count Input */}
+            <input
+              type="number"
+              min="5"
+              max="24"
+              value={kValue}
+              onChange={(e) => {
+                const value = parseInt(e.target.value) || 5;
+                setKValue(Math.min(24, Math.max(5, value)).toString());
+              }}
+              className="w-20 px-3 py-3 border border-gray-300 rounded-lg text-center text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
             
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -704,6 +706,39 @@ export default function Home() {
 
               {/* Chat Input */}
               <div className="p-6 border-t border-gray-200 rounded-b-xl bg-gray-50">
+                <div className="mb-3 flex gap-3">
+                  <select
+                    value={chatCollection}
+                    onChange={(e) => setChatCollection(e.target.value)}
+                    disabled={isLoadingCollections}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200 bg-white text-sm font-medium text-gray-900 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoadingCollections ? (
+                      <option value="">Loading collections...</option>
+                    ) : collections.length > 0 ? (
+                      collections.map((collection) => (
+                        <option key={collection.name} value={collection.name}>
+                          {collection.name} ({collection.count})
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">No collections available</option>
+                    )}
+                  </select>
+                  
+                  {/* K Value Input */}
+                  <input
+                    type="number"
+                    min="5"
+                    max="24"
+                    value={chatKValue}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 5;
+                      setChatKValue(Math.min(24, Math.max(5, value)));
+                    }}
+                    className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
                 <form onSubmit={handleChatSubmit} className="flex gap-3">
                   <input
                     type="text"
