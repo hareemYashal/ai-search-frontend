@@ -17,10 +17,17 @@ interface UploadProgress {
 
 const ScrapProductsPage = () => {
     // Scraping state
-    const [domain, setDomain] = useState('henne.us');
+    const [domain, setDomain] = useState('');
     const [scraping, setScraping] = useState(false);
     const [scrapedProducts, setScrapedProducts] = useState<ScrapedProduct[]>([]);
     const [storeDomain, setStoreDomain] = useState<string>('');
+
+    // Scraping progress state
+    const [scrapeProgress, setScrapeProgress] = useState<{
+        currentPage: number;
+        totalProducts: number;
+        status: string;
+    }>({ currentPage: 0, totalProducts: 0, status: '' });
 
     // Selection state
     const [selectedProducts, setSelectedProducts] = useState<Set<number>>(new Set());
@@ -34,45 +41,167 @@ const ScrapProductsPage = () => {
     // UI state
     const [activeTab, setActiveTab] = useState<'scrape' | 'upload'>('scrape');
 
-    // Scrape products from domain
-    const handleScrape = async () => {
-        if (!domain.trim()) {
+    // Scrape products from domain with real-time streaming
+    const handleScrape = async (domainToScrape?: string) => {
+        const targetDomain = domainToScrape || domain;
+
+        if (!targetDomain.trim()) {
             alert('Please enter a domain');
             return;
         }
 
-        if (!isValidShopifyDomain(domain)) {
+        if (!isValidShopifyDomain(targetDomain)) {
             alert('Please enter a valid domain (e.g., henne.us or store.myshopify.com)');
             return;
+        }
+
+        // Update domain state if passed
+        if (domainToScrape) {
+            setDomain(domainToScrape);
         }
 
         setScraping(true);
         setScrapedProducts([]);
         setSelectedProducts(new Set());
         setProgress(null);
+        setScrapeProgress({ currentPage: 0, totalProducts: 0, status: 'Starting...' });
 
         try {
-            const response = await fetch('/api/shopify/scrape', {
+            const response = await fetch('/api/shopify/scrape-stream', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ domain }),
+                body: JSON.stringify({ domain: targetDomain }),
             });
 
-            const data = await response.json();
+            if (!response.body) {
+                throw new Error('No response body');
+            }
 
-            if (data.success) {
-                setScrapedProducts(data.products);
-                setStoreDomain(data.storeDomain);
-                setActiveTab('upload');
-                alert(`Successfully scraped ${data.count} products from ${data.storeDomain}!`);
-            } else {
-                alert(`Scraping failed: ${data.error}`);
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            const allProducts: ScrapedProduct[] = [];
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            console.log('SSE Event:', data.type, data);
+
+                            switch (data.type) {
+                                case 'start':
+                                    setScrapeProgress({
+                                        currentPage: 0,
+                                        totalProducts: 0,
+                                        status: `Connected to ${data.domain}`,
+                                    });
+                                    setStoreDomain(data.domain);
+                                    allProducts.length = 0; // Clear array
+                                    break;
+
+                                case 'fetching':
+                                    setScrapeProgress({
+                                        currentPage: data.page,
+                                        totalProducts: data.total,
+                                        status: `Fetching page ${data.page}...`,
+                                    });
+                                    break;
+
+                                case 'progress':
+                                    setScrapeProgress({
+                                        currentPage: data.page,
+                                        totalProducts: data.total,
+                                        status: `Fetched ${data.fetched} products from page ${data.page}`,
+                                    });
+                                    break;
+
+                                case 'waiting':
+                                    setScrapeProgress({
+                                        currentPage: data.page - 1,
+                                        totalProducts: data.total,
+                                        status: `Waiting ${data.delay / 1000}s before next page...`,
+                                    });
+                                    break;
+
+                                case 'complete':
+                                    setStoreDomain(data.storeDomain);
+                                    setScrapeProgress({
+                                        currentPage: data.count > 0 ? Math.ceil(data.count / 250) : 0,
+                                        totalProducts: data.count,
+                                        status: `Receiving products... (${data.count} total)`,
+                                    });
+                                    break;
+
+                                case 'products':
+                                    // Accumulate product chunks
+                                    allProducts.push(...data.chunk);
+                                    console.log(`Accumulated ${allProducts.length} products so far`);
+                                    setScrapeProgress(prev => ({
+                                        ...prev,
+                                        status: `Loading products... ${allProducts.length} of ${prev.totalProducts}`,
+                                    }));
+                                    break;
+
+                                case 'done':
+                                    console.log(`Final product count: ${allProducts.length}`);
+                                    setScrapedProducts([...allProducts]);
+                                    setScrapeProgress(prev => ({
+                                        ...prev,
+                                        status: `Complete! ${allProducts.length} products scraped`,
+                                    }));
+                                    setActiveTab('upload');
+                                    break;
+
+                                case 'error':
+                                    throw new Error(data.error);
+
+                                case 'warning':
+                                    console.warn(data.message);
+                                    setScrapeProgress(prev => ({
+                                        ...prev,
+                                        status: data.message,
+                                    }));
+                                    break;
+                            }
+                        } catch (parseError) {
+                            console.error('Error parsing SSE data:', parseError, 'Line:', line);
+                            // Continue processing other lines
+                        }
+                    }
+                }
+            }
+
+            // Process any remaining data in buffer
+            if (buffer.trim() && buffer.startsWith('data: ')) {
+                try {
+                    const data = JSON.parse(buffer.slice(6));
+                    if (data.type === 'done') {
+                        console.log(`Final product count (from buffer): ${allProducts.length}`);
+                        setScrapedProducts([...allProducts]);
+                        setActiveTab('upload');
+                    }
+                } catch (e) {
+                    console.error('Error parsing final buffer:', e);
+                }
             }
         } catch (error) {
             console.error('Scraping error:', error);
             alert(`Scraping failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            setScrapeProgress({
+                currentPage: 0,
+                totalProducts: 0,
+                status: 'Failed',
+            });
         } finally {
             setScraping(false);
         }
@@ -232,10 +361,64 @@ const ScrapProductsPage = () => {
                     {/* Tab Content */}
                     {activeTab === 'scrape' && (
                         <div>
+                            {/* Quick Select Popular Stores */}
+                            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6 mb-6">
+                                <h2 className="text-xl font-semibold text-purple-900 mb-4">
+                                    ⚡ Quick Select - Popular Stores
+                                </h2>
+                                <p className="text-sm text-gray-600 mb-4">
+                                    Click any store below to instantly scrape their products
+                                </p>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    {[
+                                        { domain: 'honestpaws.com', count: '~38' },
+                                        { domain: 'henne.us', count: '~390' },
+                                        { domain: 'nutritionfaktory.com', count: 'TBD' },
+                                        { domain: 'shopjoe.com', count: 'TBD' },
+                                        { domain: 'slickproductsusa.com', count: 'TBD' },
+                                        { domain: 'ridejetson.com', count: 'TBD' },
+                                        { domain: 'arhaus.com', count: 'TBD' },
+                                        { domain: 'hobbiesville.com', count: '~25K' },
+                                    ].map((store) => (
+                                        <button
+                                            key={store.domain}
+                                            onClick={() => {
+                                                // Clear all previous state
+                                                setScrapedProducts([]);
+                                                setSelectedProducts(new Set());
+                                                setSelectAll(false);
+                                                setProgress(null);
+                                                setScrapeProgress({ currentPage: 0, totalProducts: 0, status: '' });
+                                                setActiveTab('scrape');
+
+                                                // Start scraping with the store domain directly
+                                                handleScrape(store.domain);
+                                            }}
+                                            disabled={scraping}
+                                            className={`p-4 rounded-lg border-2 transition-all transform ${scraping
+                                                ? 'bg-gray-100 border-gray-300 cursor-not-allowed'
+                                                : domain === store.domain && scrapedProducts.length > 0
+                                                    ? 'bg-blue-100 border-blue-500 shadow-md'
+                                                    : 'bg-white border-purple-300 hover:border-purple-500 hover:shadow-lg hover:scale-105'
+                                                }`}
+                                        >
+                                            <div className="text-left">
+                                                <div className="font-semibold text-gray-900 text-sm truncate">
+                                                    {store.domain}
+                                                </div>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    {store.count} products
+                                                </div>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
                             {/* Scraping Form */}
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
                                 <h2 className="text-xl font-semibold text-blue-900 mb-4">
-                                    Enter Shopify Store Domain
+                                    🔍 Or Enter Custom Domain
                                 </h2>
 
                                 <div className="space-y-4">
@@ -247,7 +430,7 @@ const ScrapProductsPage = () => {
                                             type="text"
                                             value={domain}
                                             onChange={(e) => setDomain(e.target.value)}
-                                            placeholder="e.g., henne.us or store.myshopify.com"
+                                            placeholder="e.g., allbirds.com or store.myshopify.com"
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             disabled={scraping}
                                             onKeyPress={(e) => e.key === 'Enter' && handleScrape()}
@@ -258,7 +441,7 @@ const ScrapProductsPage = () => {
                                     </div>
 
                                     <button
-                                        onClick={handleScrape}
+                                        onClick={() => handleScrape()}
                                         disabled={scraping}
                                         className={`w-full py-4 px-6 rounded-lg font-semibold text-white text-lg transition-all transform ${scraping
                                             ? 'bg-gray-400 cursor-not-allowed'
@@ -294,6 +477,57 @@ const ScrapProductsPage = () => {
                                         )}
                                     </button>
                                 </div>
+
+                                {/* Real-time Progress Display */}
+                                {scraping && scrapeProgress.status && (
+                                    <div className="mt-6 bg-white border border-blue-300 rounded-lg p-6">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-lg font-semibold text-gray-900">
+                                                Scraping Progress
+                                            </h3>
+                                            <div className="flex items-center space-x-2">
+                                                <div className="animate-pulse h-3 w-3 bg-blue-600 rounded-full"></div>
+                                                <span className="text-sm text-gray-600">Live</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            {/* Status */}
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm font-medium text-gray-700">Status:</span>
+                                                <span className="text-sm text-blue-600 font-semibold">{scrapeProgress.status}</span>
+                                            </div>
+
+                                            {/* Current Page */}
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm font-medium text-gray-700">Current Page:</span>
+                                                <span className="text-sm text-gray-900 font-bold">{scrapeProgress.currentPage}</span>
+                                            </div>
+
+                                            {/* Total Products */}
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm font-medium text-gray-700">Products Fetched:</span>
+                                                <span className="text-xl text-green-600 font-bold">{scrapeProgress.totalProducts}</span>
+                                            </div>
+
+                                            {/* Progress Bar */}
+                                            {scrapeProgress.currentPage > 0 && (
+                                                <div className="mt-4">
+                                                    <div className="flex justify-between text-xs text-gray-600 mb-2">
+                                                        <span>Page {scrapeProgress.currentPage}</span>
+                                                        <span>{scrapeProgress.totalProducts} products</span>
+                                                    </div>
+                                                    <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                                                        <div
+                                                            className="bg-gradient-to-r from-blue-500 to-purple-500 h-2.5 rounded-full transition-all duration-300 animate-pulse"
+                                                            style={{ width: '100%' }}
+                                                        ></div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Instructions */}
@@ -302,21 +536,22 @@ const ScrapProductsPage = () => {
                                     ℹ️ How It Works
                                 </h3>
                                 <ol className="list-decimal list-inside space-y-2 text-yellow-800">
-                                    <li>Enter any Shopify store domain (e.g., henne.us)</li>
-                                    <li>Click "Scrape Products" to fetch all products from that store</li>
+                                    <li>Click a quick-select store button OR enter any custom Shopify store domain</li>
+                                    <li>Watch real-time progress as products are fetched (page-by-page with delays to avoid rate limits)</li>
                                     <li>Review and select the products you want to upload</li>
-                                    <li>Download the JSON file (optional) or upload directly to your store</li>
+                                    <li>Download as JSON/JSONL (optional) or upload directly to your store</li>
                                     <li>Monitor the upload progress and review any errors</li>
                                 </ol>
 
                                 <div className="mt-4 p-4 bg-yellow-100 rounded">
                                     <p className="text-sm text-yellow-900 font-medium">
-                                        💡 Example domains to try:
+                                        ✨ Features:
                                     </p>
                                     <ul className="mt-2 space-y-1 text-sm text-yellow-800">
-                                        <li>• henne.us</li>
-                                        <li>• allbirds.com</li>
-                                        <li>• gymshark.com</li>
+                                        <li>• <strong>Real-time progress:</strong> See each page being fetched live</li>
+                                        <li>• <strong>Smart pagination:</strong> Automatically handles all pages (up to 25K+ products)</li>
+                                        <li>• <strong>Rate limiting:</strong> Built-in delays prevent blocking</li>
+                                        <li>• <strong>Error handling:</strong> Automatic retries with exponential backoff</li>
                                     </ul>
                                 </div>
                             </div>

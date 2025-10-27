@@ -54,14 +54,64 @@ export function getShopifyProductUrl(product: ScrapedProduct, domain: string) {
  */
 export function buildProductsUrl(domain: string): string {
   const cleanDomain = extractDomain(domain);
+  return `https://${cleanDomain}/products.json`;
+}
 
-  // Check if it already has myshopify.com
-  if (cleanDomain.includes("myshopify.com")) {
-    return `https://${cleanDomain}/products.json?limit=250`;
+/**
+ * Helper function to fetch with retry and exponential backoff
+ */
+async function fetchWithRetry(
+  url: string,
+  maxRetries = 5,
+  initialDelay = 2000
+): Promise<Response> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+      });
+
+      // If rate limited, wait and retry with exponential backoff
+      if (response.status === 429) {
+        const retryAfter = response.headers.get("Retry-After");
+        const waitTime = retryAfter
+          ? parseInt(retryAfter) * 1000
+          : initialDelay * Math.pow(2, attempt);
+
+        console.log(
+          `Rate limited. Waiting ${waitTime}ms before retry ${
+            attempt + 1
+          }/${maxRetries}`
+        );
+
+        if (attempt < maxRetries - 1) {
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
+          continue;
+        }
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt < maxRetries - 1) {
+        const waitTime = initialDelay * Math.pow(2, attempt);
+        console.log(
+          `Request failed. Waiting ${waitTime}ms before retry ${
+            attempt + 1
+          }/${maxRetries}`
+        );
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+      }
+    }
   }
 
-  // Otherwise use the custom domain
-  return `https://${cleanDomain}/products.json?limit=250`;
+  throw lastError || new Error("Failed to fetch after multiple retries");
 }
 
 /**
@@ -72,9 +122,14 @@ export async function scrapeShopifyStore(
   options: {
     maxProducts?: number;
     includeAll?: boolean;
+    delayBetweenPages?: number;
   } = {}
 ): Promise<ScrapeResult> {
-  const { maxProducts = 250000, includeAll = true } = options;
+  const {
+    maxProducts = 250000,
+    includeAll = true,
+    delayBetweenPages = 3000,
+  } = options;
 
   try {
     const cleanDomain = extractDomain(domain);
@@ -84,17 +139,15 @@ export async function scrapeShopifyStore(
     let page = 1;
     let hasMore = true;
 
+    console.log(`Starting scrape of ${cleanDomain}...`);
+
     // Shopify's products.json endpoint supports pagination
     // We'll fetch in batches of 250 (max per page)
     while (hasMore && (includeAll || allProducts.length < maxProducts)) {
-      const url = page === 1 ? baseUrl : `${baseUrl}&page=${page}`;
+      const url = `${baseUrl}?limit=250&page=${page}`;
 
-      const response = await fetch(url, {
-        headers: {
-          Accept: "application/json",
-          "User-Agent": "Mozilla/5.0 (compatible; ProductScraper/1.0)",
-        },
-      });
+      console.log(`Fetching page ${page}...`);
+      const response = await fetchWithRetry(url);
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -123,19 +176,32 @@ export async function scrapeShopifyStore(
 
       allProducts = [...allProducts, ...data.products];
 
+      console.log(
+        `Fetched ${data.products.length} products from page ${page}. Total so far: ${allProducts.length}`
+      );
+
       // Check if we got less than 250 products (indicates last page)
       if (data.products.length < 250) {
         hasMore = false;
+        console.log("Reached last page (less than 250 products)");
       }
 
       page++;
 
+      // Add delay between requests to avoid rate limiting
+      if (hasMore && delayBetweenPages > 0) {
+        console.log(`Waiting ${delayBetweenPages}ms before next page...`);
+        await new Promise((resolve) => setTimeout(resolve, delayBetweenPages));
+      }
+
       // Safety limit to prevent infinite loops
-      if (page > 100) {
-        console.warn("Reached maximum page limit (100)");
+      if (page > 500) {
+        console.warn("Reached maximum page limit (500)");
         break;
       }
     }
+
+    console.log(`Scraping complete. Total products: ${allProducts.length}`);
 
     return {
       success: true,
@@ -165,7 +231,8 @@ export async function scrapeShopifyStoreUnlimited(
     const response = await fetch(url, {
       headers: {
         Accept: "application/json",
-        "User-Agent": "Mozilla/5.0 (compatible; ProductScraper/1.0)",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
       },
     });
 

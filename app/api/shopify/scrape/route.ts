@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { scrapeShopifyStoreUnlimited } from "@/lib/shopify-scraper";
+import { scrapeShopifyStore } from "@/lib/shopify-scraper";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,8 +21,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Scrape the store
-    const result = await scrapeShopifyStoreUnlimited(domain);
+    // Scrape the store with retry logic and delays
+    console.log(`Starting scrape for domain: ${domain}`);
+    const result = await scrapeShopifyStore(domain, {
+      includeAll: true,
+      delayBetweenPages: 3000, // 3 second delay between pages
+    });
 
     if (!result.success) {
       return NextResponse.json(
