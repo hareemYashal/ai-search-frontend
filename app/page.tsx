@@ -332,9 +332,14 @@ export default function Home() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSearch(e);
+                  }
+                }}
                 placeholder="Search for products, categories, or anything..."
                 className="input-field pl-10"
-                onSubmit={handleSearch}
               />
               {searchQuery && (
                 <button
