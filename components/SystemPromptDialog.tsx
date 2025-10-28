@@ -38,7 +38,7 @@ export default function SystemPromptDialog({ isOpen, onClose }: SystemPromptDial
     setError(null);
     
     try {
-      const response = await fetch("http://localhost:8000/system-prompt", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/system-prompt`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -80,7 +80,7 @@ export default function SystemPromptDialog({ isOpen, onClose }: SystemPromptDial
     setSuccess(false);
 
     try {
-      const response = await fetch("http://localhost:8000/system-prompt", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/system-prompt`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
