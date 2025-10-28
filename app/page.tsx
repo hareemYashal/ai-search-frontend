@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, MessageCircle, Send, Loader2, X, XCircle } from "lucide-react";
+import { Search, MessageCircle, Send, Loader2, X, XCircle, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import SystemPromptDialog from "@/components/SystemPromptDialog";
 
 interface SearchResult {
   product_id: string;
@@ -86,6 +87,7 @@ export default function Home() {
   const [kValue, setKValue] = useState<string>("5");
   const [chatCollection, setChatCollection] = useState<string>("");
   const [chatKValue, setChatKValue] = useState<number>(12);
+  const [systemPromptOpen, setSystemPromptOpen] = useState(false);
 
   // Fetch collections on component mount
   useEffect(() => {
@@ -278,17 +280,26 @@ export default function Home() {
                 </a>
               </nav>
             </div>
-            <button
-              onClick={() => setChatOpen(!chatOpen)}
-              className="relative p-2 text-gray-600 hover:text-primary-600 transition-colors"
-            >
-              <MessageCircle className="h-6 w-6" />
-              {chatMessages.length > 1 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                  {chatMessages.length - 1}
-                </span>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSystemPromptOpen(true)}
+                className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
+                title="System Prompt Settings"
+              >
+                <Settings className="h-6 w-6" />
+              </button>
+              <button
+                onClick={() => setChatOpen(!chatOpen)}
+                className="relative p-2 text-gray-600 hover:text-primary-600 transition-colors"
+              >
+                <MessageCircle className="h-6 w-6" />
+                {chatMessages.length > 1 && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {chatMessages.length - 1}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -762,6 +773,12 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* System Prompt Dialog */}
+      <SystemPromptDialog
+        isOpen={systemPromptOpen}
+        onClose={() => setSystemPromptOpen(false)}
+      />
     </div>
   );
 }
