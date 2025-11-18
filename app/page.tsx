@@ -56,6 +56,17 @@ interface Collection {
   };
 }
 
+interface Model {
+  key: string;
+  name: string;
+  provider: string;
+  model_id: string;
+}
+
+interface AvailableModelsResponse {
+  models: Model[];
+}
+
 interface CollectionsResponse {
   collections: Collection[];
   total_collections: number;
@@ -88,10 +99,14 @@ export default function Home() {
   const [chatCollection, setChatCollection] = useState<string>("");
   const [chatKValue, setChatKValue] = useState<number>(12);
   const [systemPromptOpen, setSystemPromptOpen] = useState(false);
+  const [availableModels, setAvailableModels] = useState<Model[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<Model | null>(null);
 
   // Fetch collections on component mount
   useEffect(() => {
     fetchCollections();
+    fetchAvailableModels();
   }, []);
 
   const resetChat = () => {
@@ -122,7 +137,7 @@ export default function Home() {
 
       const data: CollectionsResponse = await response.json();
       setCollections(data.collections);
-      
+
       // Set the first collection as default if none is selected
       if (data.collections.length > 0 && !selectedCollection) {
         setSelectedCollection(data.collections[0].name);
@@ -137,18 +152,43 @@ export default function Home() {
     }
   };
 
-  // Real API search function
-  const performSearch = async (query: string) => {
-    setIsSearching(true);
+  //fetchAvailableModles
+  const fetchAvailableModels = async () => {
+    setIsLoadingModels(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/models`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch available models: ${response.status}`);
+      }
+      const data: AvailableModelsResponse = await response.json();
+      setAvailableModels(data.models);
+      setSelectedModel(data.models[0]);
+    } catch (error) {
+      console.error("Error fetching available models:", error);
+      setAvailableModels([]);
+      setSelectedModel(null);
+    } finally {
+      setIsLoadingModels(false);
+    }
+  }
 
+  // Real API search function
+  const performSearch = async (query: string, model: Model) => {
+    setIsSearching(true);
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/search-fast`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           query,
+          model_id: model.model_id,
           collection_name: selectedCollection || collections[0]?.name || "products",
           k: parseInt(kValue)
         }),
@@ -177,7 +217,7 @@ export default function Home() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      performSearch(searchQuery.trim());
+      performSearch(searchQuery.trim(), selectedModel || availableModels[0]);
     }
   };
 
@@ -208,10 +248,11 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           message: chatInput,
           collection_name: chatCollection || collections[0]?.name || "products",
-          k: chatKValue
+          k: chatKValue,
+          model_id: selectedModel?.model_id || availableModels[0].model_id
         }),
       });
 
@@ -312,6 +353,7 @@ export default function Home() {
             <div className="relative">
               <div className="relative">
                 <select
+                  title="Select collection"
                   value={selectedCollection}
                   onChange={(e) => setSelectedCollection(e.target.value)}
                   disabled={isLoadingCollections}
@@ -350,6 +392,7 @@ export default function Home() {
 
             {/* Results Count Input */}
             <input
+              title="K value"
               type="number"
               min="5"
               max="24"
@@ -360,11 +403,12 @@ export default function Home() {
               }}
               className="w-20 px-3 py-3 border border-gray-300 rounded-lg text-center text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
-            
+
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               <input
                 type="text"
+                title="Search query"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
@@ -719,6 +763,7 @@ export default function Home() {
               <div className="p-6 border-t border-gray-200 rounded-b-xl bg-gray-50">
                 <div className="mb-3 flex gap-3">
                   <select
+                    title="Select collection"
                     value={chatCollection}
                     onChange={(e) => setChatCollection(e.target.value)}
                     disabled={isLoadingCollections}
@@ -736,9 +781,10 @@ export default function Home() {
                       <option value="">No collections available</option>
                     )}
                   </select>
-                  
+
                   {/* K Value Input */}
                   <input
+                    title="K value"
                     type="number"
                     min="5"
                     max="24"
@@ -749,7 +795,28 @@ export default function Home() {
                     }}
                     className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
+
+                  <select
+                    title="Select model"
+                    value={selectedModel?.key}
+                    onChange={(e) => setSelectedModel(availableModels.find((model) => model.key === e.target.value) || null)}
+                    disabled={isLoadingModels}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200 bg-white text-sm font-medium text-gray-900 hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoadingModels ? (
+                      <option value="">Loading models...</option>
+                    ) : availableModels.length > 0 ? (
+                      availableModels.map((model) => (
+                        <option key={model.key} value={model.key}>
+                          {model.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">No models available</option>
+                    )}
+                  </select>
                 </div>
+
                 <form onSubmit={handleChatSubmit} className="flex gap-3">
                   <input
                     type="text"
