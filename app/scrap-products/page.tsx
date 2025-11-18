@@ -41,6 +41,11 @@ const ScrapProductsPage = () => {
     // UI state
     const [activeTab, setActiveTab] = useState<'scrape' | 'upload'>('scrape');
 
+    // S3 upload state
+    const [showS3Modal, setShowS3Modal] = useState(false);
+    const [s3Filename, setS3Filename] = useState('');
+    const [uploadingToS3, setUploadingToS3] = useState(false);
+
     // Scrape products from domain with real-time streaming
     const handleScrape = async (domainToScrape?: string) => {
         const targetDomain = domainToScrape || domain;
@@ -291,6 +296,55 @@ const ScrapProductsPage = () => {
             alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             setUploading(false);
+        }
+    };
+
+    // Upload all scraped products to S3 as JSONL
+    const handleS3Upload = async () => {
+        if (scrapedProducts.length === 0) {
+            alert('No products to upload to S3');
+            return;
+        }
+
+        if (!s3Filename.trim()) {
+            alert('Please enter a filename');
+            return;
+        }
+
+        const productsToUpload = scrapedProducts;
+
+        if (!confirm(`Upload ${productsToUpload.length} products to S3 as "${s3Filename.trim()}.jsonl"?`)) {
+            return;
+        }
+
+        setUploadingToS3(true);
+
+        try {
+            const response = await fetch('/api/shopify/upload-s3', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    products: productsToUpload,
+                    filename: s3Filename.trim(),
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert(`✅ Successfully uploaded ${productsToUpload.length} products to S3!\nFile: ${data.key}`);
+                setShowS3Modal(false);
+                setS3Filename('');
+            } else {
+                alert(`❌ S3 upload failed: ${data.error}`);
+            }
+        } catch (error) {
+            console.error('S3 upload error:', error);
+            alert(`❌ S3 upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        } finally {
+            setUploadingToS3(false);
         }
     };
 
@@ -589,6 +643,17 @@ const ScrapProductsPage = () => {
                                         </button>
 
                                         <button
+                                            onClick={() => setShowS3Modal(true)}
+                                            disabled={scrapedProducts.length === 0}
+                                            className={`px-4 py-2 rounded-lg font-semibold text-white transition-all ${scrapedProducts.length === 0
+                                                ? 'bg-gray-400 cursor-not-allowed'
+                                                : 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 hover:shadow-lg'
+                                                }`}
+                                        >
+                                            ☁️ Upload to S3
+                                        </button>
+
+                                        <button
                                             onClick={handleUpload}
                                             disabled={uploading || selectedProducts.size === 0}
                                             className={`px-6 py-2 rounded-lg font-semibold text-white transition-all ${uploading || selectedProducts.size === 0
@@ -814,6 +879,7 @@ const ScrapProductsPage = () => {
                                 </h3>
                                 <ul className="list-disc list-inside space-y-2 text-yellow-800">
                                     <li>Ensure your <code className="bg-yellow-100 px-2 py-1 rounded">.env.local</code> is configured with Shopify credentials</li>
+                                    <li>For S3 uploads, configure AWS credentials: <code className="bg-yellow-100 px-2 py-1 rounded">AWS_ACCESS_KEY_ID</code>, <code className="bg-yellow-100 px-2 py-1 rounded">AWS_SECRET_ACCESS_KEY</code>, <code className="bg-yellow-100 px-2 py-1 rounded">AWS_REGION</code>, <code className="bg-yellow-100 px-2 py-1 rounded">S3_BUCKET_NAME</code>, and <code className="bg-yellow-100 px-2 py-1 rounded">S3_DIRECTORY_NAME</code></li>
                                     <li>Products will be uploaded in batches of 10 with 1-second delays</li>
                                     <li>All products will be created as ACTIVE in your store</li>
                                     <li>Images will be automatically linked from the source store</li>
@@ -823,6 +889,101 @@ const ScrapProductsPage = () => {
                     )}
                 </div>
             </div>
+
+
+            {/* S3 Upload Modal */}
+            {
+                showS3Modal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold text-gray-900">
+                                    ☁️ Upload to S3
+                                </h2>
+                                <button
+                                    onClick={() => setShowS3Modal(false)}
+                                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                                >
+                                    ×
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Filename (without extension)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={s3Filename}
+                                        onChange={(e) => setS3Filename(e.target.value)}
+                                        placeholder="e.g., scraped-products-henne"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                        disabled={uploadingToS3}
+                                        onKeyPress={(e) => e.key === 'Enter' && handleS3Upload()}
+                                    />
+                                    <p className="mt-2 text-sm text-gray-600">
+                                        File will be saved as: <code className="bg-gray-100 px-2 py-1 rounded">{s3Filename || 'filename'}.jsonl</code>
+                                    </p>
+                                </div>
+
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <p className="text-sm text-blue-800">
+                                        <strong>{scrapedProducts.length}</strong> products will be uploaded as JSONL format to your S3 bucket.
+                                    </p>
+                                </div>
+
+                                <div className="flex space-x-3">
+                                    <button
+                                        onClick={() => setShowS3Modal(false)}
+                                        disabled={uploadingToS3}
+                                        className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium transition-colors disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleS3Upload}
+                                        disabled={uploadingToS3 || !s3Filename.trim()}
+                                        className={`flex-1 px-4 py-2 rounded-lg font-semibold text-white transition-all ${uploadingToS3 || !s3Filename.trim()
+                                            ? 'bg-gray-400 cursor-not-allowed'
+                                            : 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 hover:shadow-lg'
+                                            }`}
+                                    >
+                                        {uploadingToS3 ? (
+                                            <span className="flex items-center justify-center">
+                                                <svg
+                                                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <circle
+                                                        className="opacity-25"
+                                                        cx="12"
+                                                        cy="12"
+                                                        r="10"
+                                                        stroke="currentColor"
+                                                        strokeWidth="4"
+                                                    ></circle>
+                                                    <path
+                                                        className="opacity-75"
+                                                        fill="currentColor"
+                                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                    ></path>
+                                                </svg>
+                                                Uploading...
+                                            </span>
+                                        ) : (
+                                            'Upload to S3'
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
         </div>
     );
 };

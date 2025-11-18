@@ -14,8 +14,9 @@ A modern Next.js application with search functionality and chat feature.
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm or yarn
+- AWS account (for S3 uploads)
 
 ### Installation
 
@@ -24,12 +25,33 @@ A modern Next.js application with search functionality and chat feature.
 npm install
 ```
 
-2. Run the development server:
+2. Configure environment variables:
+
+   Create a `.env.local` file in the root directory with the following AWS S3 configuration:
+
+   ```env
+   # AWS S3 Configuration (Required for S3 uploads)
+   AWS_ACCESS_KEY_ID=your_aws_access_key_id_here
+   AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key_here
+   AWS_REGION=us-east-1
+   S3_BUCKET_NAME=shopify-ai-s3-bucket
+   S3_BUCKET_REGION=us-east-2
+   S3_DIRECTORY_NAME=data
+
+   # Shopify Configuration (Required for product uploads)
+   # Add your Shopify credentials here
+   ```
+
+   **Important:**
+   - Make sure `AWS_REGION` or `S3_BUCKET_REGION` matches the actual region where your S3 bucket is located. If you get a "PermanentRedirect" error, update the region to match your bucket's region (e.g., `us-east-2`).
+   - `S3_DIRECTORY_NAME` specifies the folder inside your bucket where files will be stored. Files will be saved as: `{S3_DIRECTORY_NAME}/{filename}-{timestamp}.jsonl`
+
+3. Run the development server:
 ```bash
 npm run dev
 ```
 
-3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Project Structure
 
