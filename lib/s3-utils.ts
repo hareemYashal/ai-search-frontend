@@ -32,9 +32,7 @@ export async function uploadJsonlToS3(
     }
 
     // Convert products to JSONL format
-    const jsonlContent = products
-      .map((product) => JSON.stringify(product))
-      .join("\n");
+    const jsonlContent = products;
 
     // Create the key with directory
     const key = `${directory}/${filename}.jsonl`;
@@ -43,6 +41,7 @@ export async function uploadJsonlToS3(
     const command = new PutObjectCommand({
       Bucket: process.env.S3_BUCKET_NAME,
       Key: key,
+      //@ts-ignore
       Body: jsonlContent,
       ContentType: "application/jsonl",
       Metadata: {

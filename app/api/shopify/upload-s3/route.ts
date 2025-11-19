@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     const { products, filename } = await request.json();
 
     // Validate input
-    if (!products || !Array.isArray(products) || products.length === 0) {
+    if (!products) {
       return NextResponse.json(
         { success: false, error: "No products provided" },
         { status: 400 }
@@ -38,16 +38,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Type check products
-    const validatedProducts: ScrapedProduct[] = products.map((product: any) => {
-      if (!product.id || !product.title) {
-        throw new Error("Invalid product data");
-      }
-      return product as ScrapedProduct;
-    });
-
     // Upload to S3
-    const result = await uploadJsonlToS3(validatedProducts, cleanFilename);
+    const result = await uploadJsonlToS3(products, cleanFilename);
 
     if (result.success) {
       return NextResponse.json({

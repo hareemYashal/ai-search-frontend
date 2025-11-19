@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { ScrapedProduct } from '@/lib/product-uploader';
-import { downloadProductsJson, downloadProductsJsonl, isValidShopifyDomain } from '@/lib/shopify-scraper';
+import { convertToJsonl, downloadProductsJson, downloadProductsJsonl, isValidShopifyDomain } from '@/lib/shopify-scraper';
 
 interface UploadProgress {
     total: number;
@@ -311,8 +311,7 @@ const ScrapProductsPage = () => {
             return;
         }
 
-        const productsToUpload = scrapedProducts;
-
+        const productsToUpload = convertToJsonl(scrapedProducts, storeDomain || 'products');
         if (!confirm(`Upload ${productsToUpload.length} products to S3 as "${s3Filename.trim()}.jsonl"?`)) {
             return;
         }
